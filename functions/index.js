@@ -18,6 +18,7 @@ firebase.initializeApp(firebaseConfig);
 
 const db = admin.firestore();
 
+//Get all screams
 app.get('/screams', (request, response) => {
     db
         .collection('screams')
@@ -41,12 +42,48 @@ app.get('/screams', (request, response) => {
         });
 })
 
-app.post('/scream', (request, response) => {
+const FBAuth = (request, response, next) => {
+    let idToken;
+    if (request.headers.authorization && request.headers.authorization.startsWith('Bearer ')) {
+        idToken = request.headers.authorization.split('Bearer ')[1];
+    } else {
+        console.error("No token found");
+        return response.status(403).json({ error: 'Unauthorized' });
+    }
+    admin
+        .auth()
+        .verifyIdToken(idToken)
+        .then((decodedToken) => {
+            request.user = decodedToken;
+            console.log(decodedToken);
+            return db
+                    .collection('users')
+                    .where('userId', '==', request.user.uid)
+                    .limit(1)
+                    .get();
+        })
+        .then((data) => {
+            request.user.handle = data.docs[0].data().handle;
+            return next();
+        })
+        .catch((err) => {
+            console.error("Error while verifying token", err);
+            return response.status(403).json(err);
+        })
+}
+
+//Post one scream
+app.post('/scream', FBAuth, (request, response) => {
+    if (request.body.body.trim() === '') {
+        return response.status(400).json({ body: "Body must not be empty"});
+    }
+
     const newScream = {
         body: request.body.body,
-        userHandle: request.body.userHandle,
+        userHandle: request.user.handle,
         createdAt: new Date().toISOString(),
     }
+
     db
         .collection('screams')
         .add(newScream)
@@ -54,8 +91,8 @@ app.post('/scream', (request, response) => {
             response.status(201).json({ message: `Document ${doc.id} created successfully!` });
         })
         .catch((err) => {
-            response.status(500).json({ error: 'Oops! Something went wrong.' });
             console.error(err);
+            response.status(500).json({ error: 'Oops! Something went wrong.' });
         });
 })
 
@@ -158,7 +195,7 @@ app.post('/login', (request, response) => {
         .catch((err) => {
             console.error(err);
             if (err.code !== '') {
-                return response.status(403).json({ email: 'Wrong credentials, please try again' });
+                return response.status(403).json({ general: 'Wrong credentials, please try again' });
             } else {
                 return response.status(500).json({ error: err.code })
             }
