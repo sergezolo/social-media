@@ -16,9 +16,10 @@ const firebaseConfig = {
 const firebase = require('firebase');
 firebase.initializeApp(firebaseConfig);
 
+const db = admin.firestore();
+
 app.get('/screams', (request, response) => {
-    admin
-        .firestore()
+    db
         .collection('screams')
         .orderBy('createdAt', 'desc')
         .get()
@@ -46,8 +47,7 @@ app.post('/scream', (request, response) => {
         userHandle: request.body.userHandle,
         createdAt: new Date().toISOString(),
     }
-    admin
-        .firestore()
+    db
         .collection('screams')
         .add(newScream)
         .then ((doc) => {
@@ -70,14 +70,51 @@ app.post('/signup', (request, response) => {
 
     // TODO: validate data
 
-    firebase
-        .auth()
-        .createUserWithEmailAndPassword(newUser.email, newUser.password)
-        .then((data) => {
-            response.status(201).json({ message: `User ${data.user.uid} signed up successfully` });
+    let token, userId;
+
+    db
+        .doc( `/users/${newUser.handle}`)
+        .get()
+        .then((doc) => {
+            if (doc.exists) {
+                return response.status(400).json({ handle: 'This user is already signed in' });
+            } else {
+                return firebase
+                            .auth()
+                            .createUserWithEmailAndPassword(newUser.email, newUser.password)
+            }
         })
+        .then((data) => {
+            userId = data.user.uid;
+            return data.user.getIdToken();
+        })
+        .then ((idToken) => {
+            token = idToken;
+            const userCredentials = {
+                handle: newUser.handle,
+                email: newUser.email,
+                createdAt: new Date().toISOString(),
+                userId,
+            }
+            return db.doc(`/users/${newUser.handle}`).set(userCredentials);
+        })
+        .then(() => {
+            response.status(201).json({ token })
+        })
+
+
+    // firebase
+    //     .auth()
+    //     .createUserWithEmailAndPassword(newUser.email, newUser.password)
+    //     .then((data) => {
+    //         response.status(201).json({ message: `User ${data.user.uid} signed up successfully` });
+    //     })
         .catch((err) => {
-            response.status(500).json({ error: err.code });
+            if (err.code === "auth/email-already-in-use") {
+                return response.status(400).json({ email: 'This email is already in use' });
+            } else {
+                response.status(500).json({ error: err.code });
+            }
             console.error(err);
         });
 });
