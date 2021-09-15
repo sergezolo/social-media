@@ -2,6 +2,7 @@ const { admin, db }  = require('../util/admin');
 const firebase = require('firebase');
 const firebaseConfig = require('../util/config');
 const { validateSignupData, validateLoginData, reduceUserDetails } = require('../util/validators');
+const { get } = require('http');
 firebase.initializeApp(firebaseConfig);
 
 exports.signup = (request, response) => {
@@ -95,6 +96,31 @@ exports.addUserDetails = (request, response) => {
         .update(userDetails)
         .then(() => {
             return response.status(201).json({ message: "Details added successfully"});
+        })
+        .catch((err)=> {
+            console.error(err);
+            return response.status(500).json({ error: err.code });
+        })
+};
+
+exports.getAuthenticatedUser = (request, response) => {
+    let userData = {};
+
+    db
+        .doc(`/users/${request.user.handle}`)
+        .get()
+        .then((doc) => {
+            if (doc.exists) {
+                userData.credentials = doc.data();
+                return db.collection('likes').where('userHandle', '==', request.user.handle).get();
+            }
+        })
+        .then((data) => {
+            userData.likes = [];
+            data.forEach((doc) => {
+                userData.likes.push(doc.data());
+            });
+            return response.json(userData);
         })
         .catch((err)=> {
             console.error(err);
