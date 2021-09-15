@@ -1,7 +1,7 @@
 const { admin, db }  = require('../util/admin');
 const firebase = require('firebase');
 const firebaseConfig = require('../util/config');
-const { validateSignupData, validateLoginData } = require('../util/validators');
+const { validateSignupData, validateLoginData, reduceUserDetails } = require('../util/validators');
 firebase.initializeApp(firebaseConfig);
 
 exports.signup = (request, response) => {
@@ -87,6 +87,21 @@ exports.login = (request, response) => {
         })
 };
 
+exports.addUserDetails = (request, response) => {
+    let userDetails = reduceUserDetails(request.body);
+
+    db
+        .doc(`/users/${request.user.handle}`)
+        .update(userDetails)
+        .then(() => {
+            return response.status(201).json({ message: "Details added successfully"});
+        })
+        .catch((err)=> {
+            console.error(err);
+            return response.status(500).json({ error: err.code });
+        })
+};
+
 exports.uploadImage = (request,response) => {
     const BusBoy = require('busboy');
     const path = require('path');
@@ -132,4 +147,5 @@ exports.uploadImage = (request,response) => {
         })
     })
     busboy.end(request.rawBody);
-}
+};
+
