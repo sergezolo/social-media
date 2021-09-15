@@ -42,6 +42,6 @@ exports.postOneScream = (request, response) => {
         })
         .catch((err) => {
             console.error(err);
-            response.status(500).json({ error: 'Oops! Something went wrong.' });
+            response.status(500).json({ error: 'Oops! Something went wrong' });
         });
 };
