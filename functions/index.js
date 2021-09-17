@@ -7,10 +7,14 @@ const {
     login, 
     uploadImage, 
     addUserDetails, 
-    getAuthenticatedUser 
+    getAuthenticatedUser,
 } = require('./handlers/users');
 
-const { getAllScreams, postOneScream } = require('./handlers/screams');
+const { 
+    getAllScreams, 
+    postOneScream ,
+    getScream,
+} = require('./handlers/screams');
 
 //Login routes
 app.post('/signup', signup);
@@ -24,6 +28,12 @@ app.get('/user', FBAuth, getAuthenticatedUser);
 //Scream routes
 app.get('/screams', getAllScreams);
 app.post('/scream', FBAuth, postOneScream);
+app.get('/scream/:screamId', getScream);
+//TODO: delete scream
+//TODO: like a scream
+//TODO: unlike a scream
+//TODO: comment on scream
+
 
 // https://baseurl.com/api/...
 exports.api = functions.https.onRequest(app)
