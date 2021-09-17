@@ -14,6 +14,7 @@ const {
     getAllScreams, 
     postOneScream ,
     getScream,
+    commentOnScream,
 } = require('./handlers/screams');
 
 //Login routes
@@ -29,10 +30,11 @@ app.get('/user', FBAuth, getAuthenticatedUser);
 app.get('/screams', getAllScreams);
 app.post('/scream', FBAuth, postOneScream);
 app.get('/scream/:screamId', getScream);
-//TODO: delete scream
-//TODO: like a scream
-//TODO: unlike a scream
-//TODO: comment on scream
+app.post('/scream/:screamId/comment', FBAuth, commentOnScream);
+// TODO: delete scream
+// TODO: like a scream
+// TODO: unlike a scream
+
 
 
 // https://baseurl.com/api/...
