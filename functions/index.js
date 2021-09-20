@@ -52,11 +52,11 @@ exports.createNotificationOnLike = functions
     .firestore
     .document('likes/{id}')
     .onCreate((snapshot) => {
-        db
+        return db
             .doc(`/screams/${snapshot.data().screamId}`)
             .get()
             .then((doc) => {
-                if (doc.exists) {
+                if (doc.exists && doc.data().userHandle !== snapshot.data().userHandle) {
                     return db
                             .doc(`/notifications/${snapshot.id}`) 
                             .set({
@@ -69,25 +69,16 @@ exports.createNotificationOnLike = functions
                             })
                 }
             })
-            .then(() => {
-                return;
-            })
-            .catch((err) => {
-                console.error(err);
-                return;
-            });
+            .catch((err) => console.error(err));
     });
 
 exports.deleteNotificationOnUnLike = functions
     .firestore
     .document('likes/{id}')
     .onDelete((snapshot) => {
-        db
+        return db
             .doc(`/notifications/${snapshot.id}`)
             .delete()
-            .then(() => {
-                return;
-            })
             .catch((err) => {
                 console.error(err);
                 return;
@@ -98,11 +89,11 @@ exports.createNotificationOnComment = functions
     .firestore
     .document('comments/{id}')
     .onCreate((snapshot) => {
-        db
+        return db
             .doc(`/screams/${snapshot.data().screamId}`)
             .get()
             .then((doc) => {
-                if (doc.exists) {
+                if (doc.exists && doc.data().userHandle !== snapshot.data().userHandle) {
                     return db
                             .doc(`/notifications/${snapshot.id}`) 
                             .set({
@@ -114,9 +105,6 @@ exports.createNotificationOnComment = functions
                                 screamId: doc.id,
                             })
                 }
-            })
-            .then(() => {
-                return;
             })
             .catch((err) => {
                 console.error(err);
