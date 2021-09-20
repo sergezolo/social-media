@@ -2,7 +2,6 @@ const { admin, db }  = require('../util/admin');
 const firebase = require('firebase');
 const firebaseConfig = require('../util/config');
 const { validateSignupData, validateLoginData, reduceUserDetails } = require('../util/validators');
-const { get } = require('http');
 firebase.initializeApp(firebaseConfig);
 
 exports.signup = (request, response) => {
@@ -120,6 +119,26 @@ exports.getAuthenticatedUser = (request, response) => {
             data.forEach((doc) => {
                 userData.likes.push(doc.data());
             });
+            return db
+                    .collection('notifications')
+                    .where('recipient', '==', request.user. handle)
+                    .orderBy('createdAt', 'desc')
+                    .limit(10)
+                    .get()
+        })
+        .then((data) => {
+            userData.notifications = [];
+            data.forEach((doc) => {
+                userData.notifications.push({
+                    recipient: doc.data().recipient,
+                    sender: doc.data().sender,
+                    createdAt: doc.data().createdAt,
+                    screamId: doc.data().screamId,
+                    type: doc.data().type,
+                    read: doc.data().read,
+                    notificationId: doc.id
+                })
+            })
             return response.json(userData);
         })
         .catch((err)=> {
