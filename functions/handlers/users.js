@@ -87,21 +87,6 @@ exports.login = (request, response) => {
         })
 };
 
-exports.addUserDetails = (request, response) => {
-    let userDetails = reduceUserDetails(request.body);
-
-    db
-        .doc(`/users/${request.user.handle}`)
-        .update(userDetails)
-        .then(() => {
-            return response.status(201).json({ message: "Details added successfully"});
-        })
-        .catch((err)=> {
-            console.error(err);
-            return response.status(500).json({ error: err.code });
-        })
-};
-
 exports.getAuthenticatedUser = (request, response) => {
     let userData = {};
 
@@ -137,6 +122,59 @@ exports.getAuthenticatedUser = (request, response) => {
                     type: doc.data().type,
                     read: doc.data().read,
                     notificationId: doc.id
+                })
+            })
+            return response.json(userData);
+        })
+        .catch((err)=> {
+            console.error(err);
+            return response.status(500).json({ error: err.code });
+        })
+};
+
+exports.addUserDetails = (request, response) => {
+    let userDetails = reduceUserDetails(request.body);
+
+    db
+        .doc(`/users/${request.user.handle}`)
+        .update(userDetails)
+        .then(() => {
+            return response.status(201).json({ message: "Details added successfully"});
+        })
+        .catch((err)=> {
+            console.error(err);
+            return response.status(500).json({ error: err.code });
+        })
+};
+
+exports.getUserDetails = (request, response) => {
+    let userData = {};
+    db
+        .doc(`/users/${request.params.handle}`)
+        .get()
+        .then((doc) => {
+            if (doc.exists) {
+                userData.user = doc.data();
+                return db
+                        .collection('screams')
+                        .where('userHandle', '==', request.params.handle)
+                        .orderBy('createdAt', 'desc')
+                        .get();
+            } else {
+                return response.status(404).json({ error: "User not found" });
+            }
+        })
+        .then((data) => {
+            userData.screams = [];
+            data.forEach((doc) => {
+                userData.screams.push({
+                    body: doc.data().body,
+                    createdAt: doc.data().createdAt,
+                    userHandle: doc.data().userHandle,
+                    userImage: doc.data().userImage,
+                    likeCount: doc.data().likeCount,
+                    commentCount: doc.data().commentCount,
+                    screamId: doc.id
                 })
             })
             return response.json(userData);
@@ -194,3 +232,19 @@ exports.uploadImage = (request,response) => {
     busboy.end(request.rawBody);
 };
 
+exports.markNotificationsRead = (request, response) => {
+    let batch = db.batch();
+    request.body.forEach((notificationId) => {
+        const notification = db.doc(`/notifications/${notificationId}`);
+        batch.update(notification, { read: true });
+    });
+    batch
+        .commit()
+        .then(() => {
+            return response.json({ message: "Notification marked read" });
+        })
+        .catch((err)=> {
+            console.error(err);
+            return response.status(500).json({ error: err.code });
+        })
+};
